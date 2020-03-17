@@ -11,6 +11,7 @@ class Client
 	protected $_url=null;
 	protected $_headers=array();
 	protected $_postData=array();
+	protected $_connTimeout=30;
 	protected $_lastData=null;
 	
 	public function __destruct()
@@ -31,6 +32,17 @@ class Client
 	{
 		$this->_url		= $url;
 		curl_setopt($this->getCurl(), CURLOPT_URL, $url);
+		return $this;
+	}
+	public function setConnTimeout($secs)
+	{
+		if ($this->_connTimeout != $secs) {
+			$this->_connTimeout		= $secs;
+			if ($this->_curl !== null) {
+				curl_setopt($this->_curl, CURLOPT_CONNECTTIMEOUT, $this->_connTimeout);
+			}
+		}
+		
 		return $this;
 	}
 	public function getUrl()
@@ -60,11 +72,18 @@ class Client
 	{
 		return $this->_headers;
 	}
+	public function addPostData($key, $value)
+	{
+		$this->_postData[$key]	= $value;
+		$this->setPostData($data);
+		return $this;
+	}
 	public function setPostData($data=null)
 	{
 	    //mixed input i.e:
 	    //$data	= array("hostname" => "myhost.example.com", "ipAddress" => "192.168.1.1");
 	    //$data	= "some string";
+		$this->_postData	= $data;
 	    curl_setopt($this->getCurl(), CURLOPT_POST, 1);
 	    curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, $data);
 	    return $this;
@@ -164,6 +183,15 @@ class Client
 	{
 		if ($this->_curl === null) {
 			$this->_curl	= $this->getParent()->getCurlInstance();
+			curl_setopt($this->_curl, CURLOPT_CONNECTTIMEOUT, $this->_connTimeout);
+			curl_setopt($this->_curl, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($this->_curl, CURLOPT_FOLLOWLOCATION, true);
+			//gzip header is automatically added by the CURLOPT_ENCODING option
+			curl_setopt($this->_curl, CURLOPT_ENCODING , "gzip");
+			curl_setopt($this->_curl, CURLOPT_POST, false);
+			curl_setopt($this->_curl, CURLOPT_SSL_VERIFYPEER, false);
+			curl_setopt($this->_curl, CURLOPT_VERBOSE, false);
+			curl_setopt($this->_curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:47.0) Gecko/20100101 Firefox/47.0");
 		}
 		return $this->_curl;
 	}

@@ -2,7 +2,7 @@
 	"name" : "merlinthemagic/mtm-http",
 	"type" : "library",
 	"description" : "Http wrapper tools for PHP 7",
-	"version" : "0.0.1",
+	"version" : "0.0.2",
 	"keywords" : [
 		"async",
 		"http",
