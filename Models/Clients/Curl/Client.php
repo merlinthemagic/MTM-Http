@@ -10,7 +10,8 @@ class Client
 	protected $_multiCurl=null;
 	protected $_url=null;
 	protected $_headers=array();
-	protected $_postData=array();
+	protected $_reqType="get";
+	protected $_reqData=array();
 	protected $_connTimeout=30;
 	protected $_lastData=null;
 	
@@ -31,7 +32,6 @@ class Client
 	public function setUrl($url)
 	{
 		$this->_url		= $url;
-		curl_setopt($this->getCurl(), CURLOPT_URL, $url);
 		return $this;
 	}
 	public function setConnTimeout($secs)
@@ -54,15 +54,19 @@ class Client
 		curl_setopt($this->getCurl(), CURLOPT_USERPWD, $username . ":" . $password);
 		return $this;
 	}
+	public function addHeader($name, $value)
+	{
+		$this->_headers[$name]	= $value;
+		$this->setHeaders($this->_headers);
+	}
 	public function setHeaders($heads)
 	{
 		//e.g.
 		//$heads						= array();
 		//$heads["Authorization"]		= $email . " " . $token;
-		
-		$headers	= array();
-		foreach ($heads as $name => $value) {
-			$this->_headers[$name]	= $value;
+		$this->_headers	= $heads;
+		$headers		= array();
+		foreach ($this->_headers as $name => $value) {
 			$headers[]				= $name . ": " .  $value;
 		}
 		curl_setopt($this->getCurl(), CURLOPT_HTTPHEADER, $headers);
@@ -72,25 +76,28 @@ class Client
 	{
 		return $this->_headers;
 	}
-	public function addPostData($key, $value)
+	public function setType($str)
 	{
-		$this->_postData[$key]	= $value;
+		if (in_array($str, array("get", "post", "put", "delete")) === true) {
+			$this->_reqType	= $str;
+			return $this;
+		} else {
+			throw new \Exception("Invalid request type: " . $str);
+		}
+	}
+	public function addData($key, $value)
+	{
+		$this->_reqData[$key]	= $value;
 		$this->setPostData($data);
 		return $this;
 	}
-	public function setPostData($data=null)
+	public function setData($data)
 	{
 	    //mixed input i.e:
 	    //$data	= array("hostname" => "myhost.example.com", "ipAddress" => "192.168.1.1");
 	    //$data	= "some string";
-		$this->_postData	= $data;
-	    curl_setopt($this->getCurl(), CURLOPT_POST, 1);
-	    curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, $data);
+		$this->_reqData	= $data;
 	    return $this;
-	}
-	public function getPostData()
-	{
-	    return $this->_postData;
 	}
 	public function setSslVerify($bool)
 	{
@@ -121,7 +128,58 @@ class Client
 	}
 	public function execute($throw=true)
 	{
+		curl_setopt($this->getCurl(), CURLOPT_CUSTOMREQUEST, null);
+		curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, array());
+		curl_setopt($this->getCurl(), CURLOPT_POST, 0);
+		curl_setopt($this->getCurl(), CURLOPT_URL, "");
+		
 		$this->_lastData	= null;
+		if ($this->_reqType == "get") {
+			$attrs	= "";
+			foreach ($this->_reqData as $key => $value) {
+				$attrs	.= $key . "=" . $value . "&";
+			}
+			$attrs	= trim($attrs, "&");
+			$url	= $this->getUrl();
+			if (strpos($url, "?") !== false) {
+				$lastChar	= substr($url, -1);
+				if ($lastChar != "?") {
+					if ($lastChar != "&") {
+						$url	= $url . "&";
+					}
+				}
+			} else {
+				$url	= $url . "?";
+			}
+			$url	= $url . $attrs;
+			curl_setopt($this->getCurl(), CURLOPT_URL, $url);
+		} elseif ($this->_reqType == "post") {
+			curl_setopt($this->getCurl(), CURLOPT_URL, $this->getUrl());
+			curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, $this->_reqData);
+			curl_setopt($this->getCurl(), CURLOPT_POST, 1);
+		} elseif ($this->_reqType == "put") {
+			
+			if (is_array($this->_reqData) === true) {
+				$data	= http_build_query($this->_reqData);
+			} else {
+				$data	= $this->_reqData;
+			}
+			curl_setopt($this->getCurl(), CURLOPT_URL, $this->getUrl());
+			curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, $data);
+			curl_setopt($this->getCurl(), CURLOPT_CUSTOMREQUEST, "PUT");
+		} elseif ($this->_reqType == "delete") {
+			
+			if (is_array($this->_reqData) === true) {
+				$data	= http_build_query($this->_reqData);
+			} else {
+				$data	= $this->_reqData;
+			}
+			curl_setopt($this->getCurl(), CURLOPT_URL, $this->getUrl());
+			curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, $data);
+			curl_setopt($this->getCurl(), CURLOPT_CUSTOMREQUEST, "DELETE");
+		} else {
+			throw new \Exception("Not handled for request type: " . $this->_reqType);
+		}
 		if ($this->getIsAsync() === true) {
 			curl_multi_add_handle($this->getMultiCurl(), $this->getCurl());
 			curl_multi_exec($this->getMultiCurl(), $active);
@@ -181,7 +239,7 @@ class Client
 	}
 	protected function getCurl()
 	{
-		if ($this->_curl === null) {
+		if (is_resource($this->_curl) === false) {
 			$this->_curl	= $this->getParent()->getCurlInstance();
 			curl_setopt($this->_curl, CURLOPT_CONNECTTIMEOUT, $this->_connTimeout);
 			curl_setopt($this->_curl, CURLOPT_RETURNTRANSFER, true);
