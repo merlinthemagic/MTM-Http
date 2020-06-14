@@ -116,8 +116,8 @@ class Client
 		//only allowed file format is PEM
 		if (is_object($cert) === true && $cert->getExists() === true) {
 			$fileObj	= $cert;
-		} elseif (is_string($cert) === true) {
-			$fileObj	= \MHT\Factories::getFileSystems()->getSessionFile("pem");
+		} elseif (is_string($cert) === true && $cert != "") {
+			$fileObj	= \MTM\FS\Factories::getFiles()->getTempFile("pem");
 			$fileObj->setContent($cert);
 		} else {
 			throw new \Exception("Certificate not valid");
@@ -240,7 +240,7 @@ class Client
 	protected function getCurl()
 	{
 		if (is_resource($this->_curl) === false) {
-			$this->_curl	= $this->getParent()->getCurlInstance();
+			$this->_curl	= curl_init();;
 			curl_setopt($this->_curl, CURLOPT_CONNECTTIMEOUT, $this->_connTimeout);
 			curl_setopt($this->_curl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->_curl, CURLOPT_FOLLOWLOCATION, true);

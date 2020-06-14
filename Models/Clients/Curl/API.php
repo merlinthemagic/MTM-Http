@@ -4,7 +4,7 @@ namespace MTM\Http\Models\Clients\Curl;
 
 class API
 {
-	protected $_cStore=array();
+	protected $_s=array();
 
 	public function getNewClient()
 	{
