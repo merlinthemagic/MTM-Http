@@ -88,7 +88,6 @@ class Client
 	public function addData($key, $value)
 	{
 		$this->_reqData[$key]	= $value;
-		$this->setPostData($data);
 		return $this;
 	}
 	public function setData($data)
@@ -114,16 +113,23 @@ class Client
 	{
 		//load any intermediate or root CA, self signed is fine
 		//only allowed file format is PEM
+		$filePath	= null;
 		if (is_object($cert) === true && $cert->getExists() === true) {
-			$fileObj	= $cert;
+			$filePath	= $cert->getPathAsString();
 		} elseif (is_string($cert) === true && $cert != "") {
-			$fileObj	= \MTM\FS\Factories::getFiles()->getTempFile("pem");
-			$fileObj->setContent($cert);
+			if (preg_match("/^(\/|[A-Z]{1,2}\:)/i", $cert) == 1 && file_exists($cert) === true) {
+				$filePath	= $cert;
+			} else {
+				$fileObj	= \MTM\FS\Factories::getFiles()->getTempFile("pem");
+				$fileObj->setContent($cert);
+				$filePath	= $cert->getPathAsString();
+			}
+			
 		} else {
 			throw new \Exception("Certificate not valid");
 		}
 	    
-		curl_setopt($this->getCurl(), CURLOPT_CAINFO, $fileObj->getPathAsString());
+		curl_setopt($this->getCurl(), CURLOPT_CAINFO, $filePath);
 		return $this;
 	}
 	public function execute($throw=true)
@@ -132,7 +138,7 @@ class Client
 		curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, array());
 		curl_setopt($this->getCurl(), CURLOPT_POST, 0);
 		curl_setopt($this->getCurl(), CURLOPT_URL, "");
-		
+
 		$this->_lastData	= null;
 		if ($this->_reqType == "get") {
 			$attrs	= "";
@@ -153,10 +159,13 @@ class Client
 			}
 			$url	= $url . $attrs;
 			curl_setopt($this->getCurl(), CURLOPT_URL, $url);
+			
 		} elseif ($this->_reqType == "post") {
+			
 			curl_setopt($this->getCurl(), CURLOPT_URL, $this->getUrl());
 			curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, $this->_reqData);
 			curl_setopt($this->getCurl(), CURLOPT_POST, 1);
+			
 		} elseif ($this->_reqType == "put") {
 			
 			if (is_array($this->_reqData) === true) {
