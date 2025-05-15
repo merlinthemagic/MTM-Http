@@ -1,5 +1,5 @@
 <?php
-//© 2017 Martin Madsen
+//ï¿½ 2017 Martin Madsen
 namespace MTM\Http\Models\Clients\Curl;
 
 class Client
@@ -246,10 +246,18 @@ class Client
 			return null;
 		}
 	}
+	public function getCurlError()
+	{
+		if ($this->_curl !== null) {
+			return curl_error($this->_curl);
+		} else {
+			return "No Curl";
+		}
+	}
 	protected function getCurl()
 	{
-		if (is_resource($this->_curl) === false) {
-			$this->_curl	= curl_init();;
+		if ($this->_curl === null) {
+			$this->_curl	= curl_init();
 			curl_setopt($this->_curl, CURLOPT_CONNECTTIMEOUT, $this->_connTimeout);
 			curl_setopt($this->_curl, CURLOPT_RETURNTRANSFER, true);
 			curl_setopt($this->_curl, CURLOPT_FOLLOWLOCATION, true);
@@ -271,11 +279,11 @@ class Client
 	}
 	protected function closeCurl()
 	{
-		if ($this->_curl !== null && is_resource($this->_curl) === true) {
+		if ($this->_curl !== null) {
 			curl_close($this->_curl);
 			$this->_curl	= null;
 		}
-		if ($this->_multiCurl !== null && is_resource($this->_multiCurl) === true) {
+		if ($this->_multiCurl !== null) {
 			curl_multi_close($this->_multiCurl);
 			$this->_multiCurl	= null;
 		}
