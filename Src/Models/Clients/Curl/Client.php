@@ -134,7 +134,7 @@ class Client
 	}
 	public function execute($throw=true)
 	{
-		curl_setopt($this->getCurl(), CURLOPT_CUSTOMREQUEST, null);
+		curl_setopt($this->getCurl(), CURLOPT_CUSTOMREQUEST, null); //if fails with class curl_setopt install php curl
 		curl_setopt($this->getCurl(), CURLOPT_POSTFIELDS, array());
 		curl_setopt($this->getCurl(), CURLOPT_POST, 0);
 		curl_setopt($this->getCurl(), CURLOPT_URL, "");
